@@ -1699,6 +1699,18 @@ if exist \"{tmp_path}\\{app_name} Tray.lnk\" del /f /q \"{tmp_path}\\{app_name} 
         Config::set_option("api-server".into(), lic.api);
     }
 
+    // RionsDesk baked defaults: server, key, unattended mode.
+    // These land in Config::file(), which get_import_config imports into the service,
+    // so a fresh install is ready with no post-install steps.
+    Config::set_option("key".into(), "s3TBUoXzMAwdgoqSrSElykO1p5Pwv6Y50hHdegOYaG8=".into());
+    Config::set_option("custom-rendezvous-server".into(), "rd.rions.nl".into());
+    Config::set_option("relay-server".into(), "rd.rions.nl".into());
+    Config::set_option("api-server".into(), "http://rd.rions.nl:21114".into());
+    Config::set_option("approve-mode".into(), "password".into());
+    Config::set_option("verification-method".into(), "use-permanent-password".into());
+    // RIONS_PASSWORD_HOOK: add the permanent password here, e.g.
+    //   Config::set_permanent_password("<your-password>");
+
     let tray_shortcuts = if config::is_outgoing_only() {
         "".to_owned()
     } else {
@@ -1727,6 +1739,7 @@ copy /Y \"{tmp_path}\\{app_name} Tray.lnk\" \"%PROGRAMDATA%\\Microsoft\\Windows\
 chcp 65001
 md \"{path}\"
 {copy_exe}
+{rename_exe}
 reg add {subkey} /f
 reg add {subkey} /f /v DisplayIcon /t REG_SZ /d \"{display_icon}\"
 reg add {subkey} /f /v DisplayName /t REG_SZ /d \"{app_name}\"
@@ -1765,6 +1778,7 @@ copy /Y \"{tmp_path}\\Uninstall {app_name}.lnk\" \"{path}\\\"
         sleep = if debug { "timeout 300" } else { "" },
         dels = if debug { "" } else { &dels },
         copy_exe = copy_exe_cmd(&src_exe, &exe, &path)?,
+        rename_exe = rename_exe_cmd(&src_exe, &path)?,
         import_config = get_import_config(&exe),
     );
     run_cmds(cmds, debug, "install")?;
