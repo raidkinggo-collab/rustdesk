@@ -33,7 +33,10 @@ jobs:
           name: rustdesk-unsigned-windows-x86_64
           path: app
       - name: Install Inno Setup
-        run: choco install innosetup -y --no-progress
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          if ($LASTEXITCODE -ne 0) { throw "choco install innosetup failed" }
       - name: Inject unattended password
         shell: pwsh
         run: |
@@ -43,11 +46,15 @@ jobs:
       - name: Build installers
         shell: pwsh
         run: |
-          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "ISCC not found at $iscc" }
+          $out = "$env:GITHUB_WORKSPACE\out"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
           foreach ($m in @("unattended","attended","controller")) {
-            & $iscc "/DMode=$m" "/DAppDir=$PWD\app" "/DScripts=$PWD\packaging" packaging\installer.iss
+            & $iscc "/DMode=$m" "/DAppDir=$env:GITHUB_WORKSPACE\app" "/DScripts=$env:GITHUB_WORKSPACE\packaging" "/O$out" "$env:GITHUB_WORKSPACE\packaging\installer.iss"
+            if ($LASTEXITCODE -ne 0) { throw "ISCC failed for mode=$m" }
           }
-          Get-ChildItem out\*.exe
+          Get-ChildItem $out\*.exe
       - name: Attach installers to release
         uses: softprops/action-gh-release@v2
         with:
