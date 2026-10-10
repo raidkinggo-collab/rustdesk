@@ -7,3 +7,4 @@ set EXE="C:\Program Files\RionsDesk\RionsDesk.exe"
 %EXE% --password __RIONS_PASSWORD__
 %EXE% --option approve-mode password
 %EXE% --option verification-method use-permanent-password
+%EXE% --option conn-type incoming
