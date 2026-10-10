@@ -19,6 +19,9 @@ jobs:
 
   build-rions-installers:
     needs: run-flutter-tag-build
+    # The upstream MSI job often fails (WiX $(var.Product)); that must not block us.
+    # We only need the flutter Windows artifact, which uploads regardless.
+    if: ${{ always() }}
     runs-on: windows-2022
     permissions:
       contents: write
