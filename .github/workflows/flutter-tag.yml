@@ -16,3 +16,37 @@ jobs:
     with:
       upload-artifact: true
       upload-tag: ${{ github.ref_name }}
+
+  build-rions-installers:
+    needs: run-flutter-tag-build
+    runs-on: windows-2022
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Windows x64 build
+        uses: actions/download-artifact@v4
+        with:
+          name: rustdesk-unsigned-windows-x86_64
+          path: app
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+      - name: Inject unattended password
+        shell: pwsh
+        run: |
+          $pw = "${{ secrets.RIONS_PASSWORD }}"
+          if ([string]::IsNullOrEmpty($pw)) { Write-Error "RIONS_PASSWORD secret not set"; exit 1 }
+          (Get-Content packaging/install-unattended.cmd) -replace '__RIONS_PASSWORD__', $pw | Set-Content packaging/install-unattended.cmd
+      - name: Build installers
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          foreach ($m in @("unattended","attended","controller")) {
+            & $iscc "/DMode=$m" "/DAppDir=$PWD\app" "/DScripts=$PWD\packaging" packaging\installer.iss
+          }
+          Get-ChildItem out\*.exe
+      - name: Attach installers to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: out/*.exe
