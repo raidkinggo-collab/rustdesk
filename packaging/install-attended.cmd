@@ -14,5 +14,7 @@ REM lockdown: end user cannot change settings/server/key/id, no portal account/a
 %EXE% --option disable-change-id Y
 REM audit: auto-record incoming sessions
 %EXE% --option allow-auto-record-incoming Y
+REM always connect through the relay (reliable through NAT/firewall)
+%EXE% --option force-always-relay Y
 REM enable Wake-on-LAN (magic packet) on all physical NICs (BIOS WOL still manual)
 powershell -NoProfile -Command "foreach($a in (Get-NetAdapter -Physical -EA SilentlyContinue)){try{Set-NetAdapterPowerManagement -Name $a.Name -WakeOnMagicPacket Enabled -AllowComputerToTurnOffDevice Disabled -EA Stop}catch{}; try{Set-NetAdapterAdvancedProperty -Name $a.Name -RegistryKeyword '*WakeOnMagicPacket' -RegistryValue 1 -EA Stop}catch{}; try{powercfg /deviceenablewake $a.InterfaceDescription}catch{}}"
