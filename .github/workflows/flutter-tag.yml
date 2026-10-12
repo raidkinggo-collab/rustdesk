@@ -42,7 +42,9 @@ jobs:
         run: |
           $pw = "${{ secrets.RIONS_PASSWORD }}"
           if ([string]::IsNullOrEmpty($pw)) { Write-Error "RIONS_PASSWORD secret not set"; exit 1 }
-          (Get-Content packaging/install-unattended.cmd) -replace '__RIONS_PASSWORD__', $pw | Set-Content packaging/install-unattended.cmd
+          foreach ($f in 'install-unattended.cmd','install-controller-host.cmd') {
+            (Get-Content "packaging/$f") -replace '__RIONS_PASSWORD__', $pw | Set-Content "packaging/$f"
+          }
       - name: Build installers
         shell: pwsh
         run: |
@@ -50,7 +52,7 @@ jobs:
           if (-not (Test-Path $iscc)) { throw "ISCC not found at $iscc" }
           $out = "$env:GITHUB_WORKSPACE\out"
           New-Item -ItemType Directory -Force -Path $out | Out-Null
-          foreach ($m in @("unattended","attended","controller")) {
+          foreach ($m in @("unattended","attended","controller","controller-host")) {
             & $iscc "/DMode=$m" "/DAppDir=$env:GITHUB_WORKSPACE\app" "/DScripts=$env:GITHUB_WORKSPACE\packaging" "/O$out" "$env:GITHUB_WORKSPACE\packaging\installer.iss"
             if ($LASTEXITCODE -ne 0) { throw "ISCC failed for mode=$m" }
           }
