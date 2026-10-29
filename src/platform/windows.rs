@@ -1706,10 +1706,59 @@ if exist \"{tmp_path}\\{app_name} Tray.lnk\" del /f /q \"{tmp_path}\\{app_name} 
     Config::set_option("custom-rendezvous-server".into(), "rd.rions.nl".into());
     Config::set_option("relay-server".into(), "rd.rions.nl".into());
     Config::set_option("api-server".into(), "http://rd.rions.nl:21114".into());
-    Config::set_option("approve-mode".into(), "password".into());
-    Config::set_option("verification-method".into(), "use-permanent-password".into());
-    // RIONS_PASSWORD_HOOK: add the permanent password here, e.g.
-    //   Config::set_permanent_password("<your-password>");
+    // Variant is picked from the installer file name:
+    //   *unattended* -> password-only access, locked down
+    //   *attended*   -> host must click Accept, locked down
+    //   anything else (e.g. RionsDesk-Controller.exe) -> full client, inbound needs Accept
+    // Always relay for every variant. Stale lockdown flags from an earlier install are
+    // reset explicitly (empty value removes the option), because once disable-settings is
+    // set the --option CLI refuses further changes.
+    let exe_name = std::path::Path::new(&cur_exe)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+    let (is_unattended, is_attended) = (
+        exe_name.contains("unattended"),
+        exe_name.contains("attended") && !exe_name.contains("unattended"),
+    );
+    let locked = is_unattended || is_attended;
+    for key in [
+        "disable-settings",
+        "disable-account",
+        "disable-ab",
+        "disable-installation",
+        "disable-change-permanent-password",
+        "disable-change-id",
+        "allow-auto-record-incoming",
+        "conn-type",
+    ] {
+        Config::set_option(key.into(), "".into());
+    }
+    Config::set_option("force-always-relay".into(), "Y".into());
+    if is_unattended {
+        Config::set_option("approve-mode".into(), "password".into());
+        Config::set_option("verification-method".into(), "use-permanent-password".into());
+        Config::set_permanent_password("2014rions2014");
+    } else {
+        Config::set_option("approve-mode".into(), "click".into());
+    }
+    if locked {
+        Config::set_option("conn-type".into(), "incoming".into());
+        for key in [
+            "disable-settings",
+            "disable-account",
+            "disable-ab",
+            "disable-installation",
+            "disable-change-id",
+            "allow-auto-record-incoming",
+        ] {
+            Config::set_option(key.into(), "Y".into());
+        }
+        if is_unattended {
+            Config::set_option("disable-change-permanent-password".into(), "Y".into());
+        }
+    }
 
     let tray_shortcuts = if config::is_outgoing_only() {
         "".to_owned()
