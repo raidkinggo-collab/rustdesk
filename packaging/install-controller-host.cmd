@@ -3,9 +3,21 @@ REM RionsDesk CONTROLLER + HOST - one PC that connects OUT and can also be conne
 REM conn-type left unset = both directions. Inbound uses the preset password (unattended).
 REM Password injected by CI from secret.
 cd /d "%~dp0"
+REM elevate if not running as admin (silent-install needs it)
+net session >nul 2>&1 || (powershell -NoProfile -Command "Start-Process -Verb RunAs '%~f0'" & exit /b)
 RionsDesk.exe --silent-install
-timeout /t 25 /nobreak >nul
 set EXE="C:\Program Files\RionsDesk\RionsDesk.exe"
+REM install runs async; wait until the installed exe exists before writing options,
+REM otherwise every --option below fails silently and nothing gets configured.
+set /a _w=0
+:rdwait
+if exist "C:\Program Files\RionsDesk\RionsDesk.exe" goto rdok
+set /a _w+=1
+if %_w% geq 60 goto rdok
+timeout /t 2 /nobreak >nul
+goto rdwait
+:rdok
+timeout /t 3 /nobreak >nul
 REM baked RionsDesk server so the ID/Relay/API/Key fields are populated after install
 %EXE% --option custom-rendezvous-server rd.rions.nl
 %EXE% --option relay-server rd.rions.nl
