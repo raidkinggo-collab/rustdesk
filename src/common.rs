@@ -1152,6 +1152,13 @@ fn get_api_server_(api: String, custom: String) -> String {
             return format!("http://{}", s);
         }
     }
+    // RionsDesk: with no custom server set (e.g. mobile builds, which have no installer
+    // to write --option api-server), default to the baked rendezvous host's API port
+    // instead of RustDesk's public admin.rustdesk.com.
+    let baked = config::RENDEZVOUS_SERVERS[0];
+    if !baked.is_empty() {
+        return format!("http://{}:{}", baked, config::RENDEZVOUS_PORT - 2);
+    }
     "https://admin.rustdesk.com".to_owned()
 }
 
