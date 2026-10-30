@@ -129,6 +129,30 @@ pub fn global_init() -> bool {
             crate::server::wayland::init();
         }
     }
+    // RionsDesk: seed the baked server defaults into options on first run so the
+    // Settings fields (ID / Relay / API / Key) are populated on builds that have no
+    // installer to write them (mobile APK/IPA). set-if-empty: never overwrites a value
+    // an installer or the user already set.
+    {
+        let host = config::RENDEZVOUS_SERVERS.first().copied().unwrap_or("");
+        if !host.is_empty() {
+            if Config::get_option("custom-rendezvous-server").is_empty() {
+                Config::set_option("custom-rendezvous-server".to_owned(), host.to_owned());
+            }
+            if Config::get_option("relay-server").is_empty() {
+                Config::set_option("relay-server".to_owned(), host.to_owned());
+            }
+            if Config::get_option("api-server").is_empty() {
+                Config::set_option(
+                    "api-server".to_owned(),
+                    format!("http://{}:{}", host, RENDEZVOUS_PORT - 2),
+                );
+            }
+        }
+        if !config::RS_PUB_KEY.is_empty() && Config::get_option("key").is_empty() {
+            Config::set_option("key".to_owned(), config::RS_PUB_KEY.to_owned());
+        }
+    }
     true
 }
 
