@@ -31,3 +31,30 @@ Source: "{#Scripts}\install-{#Mode}.cmd"; DestDir: "{tmp}\app"; Flags: ignorever
 [Run]
 Filename: "{cmd}"; Parameters: "/c ""{tmp}\app\install-{#Mode}.cmd"" < nul"; \
   Flags: runhidden waituntilterminated; StatusMsg: "Installing RionsDesk ({#Mode})..."
+
+[Code]
+function InitializeSetup(): Boolean;
+var
+  i, ResultCode: Integer;
+begin
+  Result := True;
+  { Accept the RustDesk-style "--silent-install" flag as an alias for Inno's }
+  { /VERYSILENT. If it is passed while the wizard is not already silent, }
+  { relaunch this same setup executable silently and abort the visible run. }
+  { This lets both "setup.exe --silent-install" and "setup.exe /VERYSILENT" }
+  { work for remote/unattended deployment. }
+  if not WizardSilent then
+  begin
+    for i := 1 to ParamCount do
+    begin
+      if CompareText(ParamStr(i), '--silent-install') = 0 then
+      begin
+        Exec(ExpandConstant('{srcexe}'),
+             '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '',
+             SW_HIDE, ewNoWait, ResultCode);
+        Result := False;
+        Exit;
+      end;
+    end;
+  end;
+end;
