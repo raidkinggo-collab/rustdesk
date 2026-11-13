@@ -3002,6 +3002,12 @@ impl LoginConfigHandler {
         // config — persisting the others would make a local setup a permanent peer property.
         self.peer_relay =
             config::option2bool("force-always-relay", &self.get_option("force-always-relay"))
+                // Fall back to the global baked default so a never-before-connected
+                // peer still forces relay (per-peer option is empty until first save).
+                || config::option2bool(
+                    "force-always-relay",
+                    &Config::get_option("force-always-relay"),
+                )
                 || force_relay;
         self.policy_relay = self.peer_relay || Config::is_proxy();
         self.force_relay = self.policy_relay || use_ws();
