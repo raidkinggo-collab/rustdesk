@@ -14,10 +14,10 @@ set /a _w=0
 if exist "C:\Program Files\RionsDesk\RionsDesk.exe" goto rdok
 set /a _w+=1
 if %_w% geq 60 goto rdok
-timeout /t 2 /nobreak >nul
+ping -n 3 127.0.0.1 >nul
 goto rdwait
 :rdok
-timeout /t 3 /nobreak >nul
+ping -n 4 127.0.0.1 >nul
 REM baked RionsDesk server so the ID/Relay/API/Key fields are populated after install
 %EXE% --option custom-rendezvous-server rd.rions.nl
 %EXE% --option relay-server rd.rions.nl
