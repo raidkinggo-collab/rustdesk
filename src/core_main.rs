@@ -264,7 +264,16 @@ pub fn core_main() -> Option<Vec<String>> {
                 }
                 return None;
             } else if args[0] == "--silent-install" {
-                if config::is_disable_installation() {
+                // Only a baked (hard) setting blocks a silent install. The RionsDesk
+                // lockdown also sets disable-installation as a normal option, which lands
+                // in the installing admin's own config; honouring it here made every
+                // re-run of the installer exit silently without installing anything.
+                if config::HARD_SETTINGS
+                    .read()
+                    .unwrap()
+                    .get("disable-installation")
+                    .map_or(false, |x| x == "Y")
+                {
                     return None;
                 }
                 let (printer_override, debug) = parse_silent_install_args(&args);
