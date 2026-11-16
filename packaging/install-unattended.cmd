@@ -3,7 +3,12 @@ REM RionsDesk UNATTENDED - no approval, preset password. Password injected by CI
 cd /d "%~dp0"
 REM elevate if not running as admin (silent-install needs it)
 fsutil dirty query %systemdrive% >nul 2>&1 || (powershell -NoProfile -Command "Start-Process -Verb RunAs '%~f0'" & exit /b)
-RionsDesk.exe --silent-install
+REM install from a copy named *unattended*: the installer picks its baked profile
+REM (password-only access, permanent password, lockdown) from the exe file name and
+REM writes it straight into the service config. The --option calls below go over IPC
+REM to the service and fail silently if it is not up yet, so they are only a backup.
+copy /Y RionsDesk.exe RionsDesk-unattended.exe >nul
+RionsDesk-unattended.exe --silent-install
 set EXE="C:\Program Files\RionsDesk\RionsDesk.exe"
 REM install runs async; wait until the installed exe exists before writing options,
 REM otherwise every --option below fails silently and nothing gets configured.

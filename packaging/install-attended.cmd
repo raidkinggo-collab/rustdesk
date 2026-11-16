@@ -3,7 +3,10 @@ REM RionsDesk ATTENDED - host must click Accept each session.
 cd /d "%~dp0"
 REM elevate if not running as admin (silent-install needs it)
 fsutil dirty query %systemdrive% >nul 2>&1 || (powershell -NoProfile -Command "Start-Process -Verb RunAs '%~f0'" & exit /b)
-RionsDesk.exe --silent-install
+REM install from a copy named *attended* so the installer bakes the attended profile
+REM (click to accept, lockdown) straight into the service config.
+copy /Y RionsDesk.exe RionsDesk-attended.exe >nul
+RionsDesk-attended.exe --silent-install
 set EXE="C:\Program Files\RionsDesk\RionsDesk.exe"
 REM install runs async; wait until the installed exe exists before writing options,
 REM otherwise every --option below fails silently and nothing gets configured.
