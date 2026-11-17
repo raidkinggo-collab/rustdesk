@@ -51,7 +51,7 @@ begin
       begin
         Exec(ExpandConstant('{srcexe}'),
              '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '',
-             SW_HIDE, ewNoWait, ResultCode);
+             SW_HIDE, ewWaitUntilTerminated, ResultCode);
         Result := False;
         Exit;
       end;

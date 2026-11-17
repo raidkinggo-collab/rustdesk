@@ -4,6 +4,10 @@ cd /d "%~dp0"
 REM elevate if not running as admin (silent-install needs it)
 fsutil dirty query %systemdrive% >nul 2>&1 || (powershell -NoProfile -Command "Start-Process -Verb RunAs '%~f0'" & exit /b)
 
+REM Clear old stale configurations so leftover lockouts from earlier versions cannot interfere
+del /F /Q "C:\Windows\ServiceProfiles\LocalService\AppData\Roaming\RionsDesk\config\*.toml" >nul 2>&1
+del /F /Q "C:\Windows\System32\config\systemprofile\AppData\Roaming\RionsDesk\config\*.toml" >nul 2>&1
+
 REM Install from a copy named *unattended* so the Rust installer core bakes
 REM the unattended profile (password-only access, permanent password) straight
 REM into the service config as baseline.
