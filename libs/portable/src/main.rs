@@ -229,12 +229,15 @@ fn is_windows_7() -> bool {
 
 fn execute(path: PathBuf, args: Vec<String>, _ui: bool) {
     println!("executing {}", path.display());
+    let is_installer_cmd = args
+        .iter()
+        .any(|a| a == "--silent-install" || a == "--install" || a == "--uninstall");
     // setup env
     let exe = std::env::current_exe().unwrap_or_default();
     let exe_name = exe.file_name().unwrap_or_default();
     // run executable
     let mut cmd = Command::new(path);
-    cmd.args(args);
+    cmd.args(&args);
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -254,9 +257,6 @@ fn execute(path: PathBuf, args: Vec<String>, _ui: bool) {
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit());
     }
-    let is_installer_cmd = args
-        .iter()
-        .any(|a| a == "--silent-install" || a == "--install" || a == "--uninstall");
     let child_res = cmd.spawn();
     if is_installer_cmd {
         if let Ok(mut child) = child_res {
