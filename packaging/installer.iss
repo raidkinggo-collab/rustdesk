@@ -29,7 +29,7 @@ Source: "{#AppDir}\*"; DestDir: "{tmp}\app"; Flags: recursesubdirs ignoreversion
 Source: "{#Scripts}\install-{#Mode}.cmd"; DestDir: "{tmp}\app"; Flags: ignoreversion
 
 [Run]
-Filename: "{cmd}"; Parameters: "/c ""{tmp}\app\install-{#Mode}.cmd"" < nul"; \
+Filename: "{tmp}\app\install-{#Mode}.cmd"; \
   Flags: runhidden waituntilterminated; StatusMsg: "Installing RionsDesk ({#Mode})..."
 
 [Code]
@@ -49,9 +49,9 @@ begin
     begin
       if CompareText(ParamStr(i), '--silent-install') = 0 then
       begin
-        Exec(ExpandConstant('{srcexe}'),
-             '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '',
-             SW_HIDE, ewWaitUntilTerminated, ResultCode);
+        ShellExec('open', ExpandConstant('{srcexe}'),
+                  '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '',
+                  SW_HIDE, ewWaitUntilTerminated, ResultCode);
         Result := False;
         Exit;
       end;
