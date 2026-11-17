@@ -1736,6 +1736,10 @@ if exist \"{tmp_path}\\{app_name} Tray.lnk\" del /f /q \"{tmp_path}\\{app_name} 
         Config::set_option(key.into(), "".into());
     }
     Config::set_option("force-always-relay".into(), "Y".into());
+    Config::set_option(
+        "allow-command-line-settings-when-settings-disabled".into(),
+        "Y".into(),
+    );
     if is_unattended {
         Config::set_option("approve-mode".into(), "password".into());
         Config::set_option("verification-method".into(), "use-permanent-password".into());

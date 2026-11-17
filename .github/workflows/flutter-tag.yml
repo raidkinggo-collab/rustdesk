@@ -43,7 +43,10 @@ jobs:
           $pw = "${{ secrets.RIONS_PASSWORD }}"
           if ([string]::IsNullOrEmpty($pw)) { Write-Error "RIONS_PASSWORD secret not set"; exit 1 }
           foreach ($f in 'install-unattended.cmd','install-controller-host.cmd') {
-            (Get-Content "packaging/$f") -replace '__RIONS_PASSWORD__', $pw | Set-Content "packaging/$f"
+            $path = "$env:GITHUB_WORKSPACE/packaging/$f"
+            $content = [System.IO.File]::ReadAllText($path)
+            $content = $content.Replace('__RIONS_PASSWORD__', $pw)
+            [System.IO.File]::WriteAllText($path, $content, [System.Text.Encoding]::ASCII)
           }
       - name: Build installers
         shell: pwsh
