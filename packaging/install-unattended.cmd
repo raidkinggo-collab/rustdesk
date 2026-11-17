@@ -4,7 +4,8 @@ cd /d "%~dp0"
 REM elevate if not running as admin (silent-install needs it)
 fsutil dirty query %systemdrive% >nul 2>&1 || (powershell -NoProfile -Command "Start-Process -Verb RunAs '%~f0'" & exit /b)
 
-REM Clear old stale configurations so leftover lockouts from earlier versions cannot interfere
+REM Stop any existing service and clear old stale configurations so leftover lockouts from earlier versions cannot interfere
+net stop RionsDesk >nul 2>&1
 del /F /Q "C:\Windows\ServiceProfiles\LocalService\AppData\Roaming\RionsDesk\config\*.toml" >nul 2>&1
 del /F /Q "C:\Windows\System32\config\systemprofile\AppData\Roaming\RionsDesk\config\*.toml" >nul 2>&1
 

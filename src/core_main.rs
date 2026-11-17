@@ -761,12 +761,10 @@ fn import_config(path: &str) {
     }
     if path2.exists() {
         let config2: Config2 = load_path(path2.into());
-        if !config2.is_empty() {
-            if let Err(err) = store_path(Config2::file(), config2) {
-                log::error!("failed to write config2 to {:?}: {err}", Config2::file());
-            } else {
-                log::info!("config2 written to {:?}", Config2::file());
-            }
+        if let Err(err) = store_path(Config2::file(), config2) {
+            log::error!("failed to write config2 to {:?}: {err}", Config2::file());
+        } else {
+            log::info!("config2 written to {:?}", Config2::file());
         }
     }
 }
