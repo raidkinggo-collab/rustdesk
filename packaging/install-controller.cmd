@@ -1,8 +1,6 @@
 @echo off
 REM RionsDesk CONTROLLER - ICT employee client, connects out. Inbound locked to manual accept.
 cd /d "%~dp0"
-REM elevate if not running as admin (silent-install needs it)
-fsutil dirty query %systemdrive% >nul 2>&1 || (powershell -NoProfile -Command "Start-Process -Verb RunAs '%~f0'" & exit /b)
 
 RionsDesk.exe --silent-install
 

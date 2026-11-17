@@ -125,6 +125,11 @@ if __name__ == '__main__':
 
     if not options.executable:
         options.executable = 'rustdesk.exe'
+    if not os.path.exists(options.executable) and not os.path.exists(os.path.join(folder, options.executable)):
+        if os.path.exists(os.path.join(folder, 'RionsDesk.exe')):
+            options.executable = 'RionsDesk.exe'
+        elif os.path.exists(os.path.join(folder, 'rustdesk.exe')):
+            options.executable = 'rustdesk.exe'
     if not options.executable.startswith(folder):
         options.executable = folder + '/' + options.executable
     # Note: the simple check `options.executable.startswith(folder)` is incorrect.

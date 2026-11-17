@@ -254,11 +254,24 @@ fn execute(path: PathBuf, args: Vec<String>, _ui: bool) {
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit());
     }
-    let _child = cmd.spawn();
+    let is_installer_cmd = args
+        .iter()
+        .any(|a| a == "--silent-install" || a == "--install" || a == "--uninstall");
+    let child_res = cmd.spawn();
+    if is_installer_cmd {
+        if let Ok(mut child) = child_res {
+            if let Ok(status) = child.wait() {
+                if let Some(code) = status.code() {
+                    std::process::exit(code);
+                }
+            }
+            std::process::exit(0);
+        }
+    }
 
     #[cfg(windows)]
     if _ui {
-        match _child {
+        match child_res {
             Ok(child) => unsafe {
                 winapi::um::winuser::AllowSetForegroundWindow(child.id() as u32);
             },

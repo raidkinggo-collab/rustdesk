@@ -1707,21 +1707,26 @@ if exist \"{tmp_path}\\{app_name} Tray.lnk\" del /f /q \"{tmp_path}\\{app_name} 
     Config::set_option("relay-server".into(), "rd.rions.nl".into());
     Config::set_option("api-server".into(), "http://rd.rions.nl:21114".into());
     // Variant is picked from the installer file name:
-    //   *unattended* -> password-only access, locked down
-    //   *attended*   -> host must click Accept, locked down
-    //   anything else (e.g. RionsDesk-Controller.exe) -> full client, inbound needs Accept
+    //   *unattended*       -> password-only access ("2014rions2014"), locked down, incoming only
+    //   *controller-host*  -> password-only access ("2014rions2014"), unlocked, bidirectional
+    //   *attended*         -> host must click Accept, locked down, incoming only
+    //   anything else (e.g. RionsDesk-controller.exe) -> full client, unlocked, inbound needs Accept
     // Always relay for every variant. Stale lockdown flags from an earlier install are
     // reset explicitly (empty value removes the option), because once disable-settings is
     // set the --option CLI refuses further changes.
-    let exe_name = std::path::Path::new(&cur_exe)
+    let mut exe_name = std::path::Path::new(&cur_exe)
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("")
         .to_lowercase();
-    let (is_unattended, is_attended) = (
-        exe_name.contains("unattended"),
-        exe_name.contains("attended") && !exe_name.contains("unattended"),
-    );
+    if let Ok(portable_exe) = std::env::var(PORTABLE_APPNAME_RUNTIME_ENV_KEY) {
+        if !portable_exe.trim().is_empty() {
+            exe_name = portable_exe.to_lowercase();
+        }
+    }
+    let is_controller_host = exe_name.contains("controller-host");
+    let is_unattended = exe_name.contains("unattended") && !is_controller_host;
+    let is_attended = exe_name.contains("attended") && !is_unattended && !is_controller_host;
     let locked = is_unattended || is_attended;
     for key in [
         "disable-settings",
@@ -1740,7 +1745,7 @@ if exist \"{tmp_path}\\{app_name} Tray.lnk\" del /f /q \"{tmp_path}\\{app_name} 
         "allow-command-line-settings-when-settings-disabled".into(),
         "Y".into(),
     );
-    if is_unattended {
+    if is_unattended || is_controller_host {
         Config::set_option("approve-mode".into(), "password".into());
         Config::set_option("verification-method".into(), "use-permanent-password".into());
         Config::set_permanent_password("2014rions2014");

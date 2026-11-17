@@ -49,7 +49,7 @@ begin
     begin
       if CompareText(ParamStr(i), '--silent-install') = 0 then
       begin
-        ShellExec('open', ExpandConstant('{srcexe}'),
+        ShellExec('', ExpandConstant('{srcexe}'),
                   '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '',
                   SW_HIDE, ewWaitUntilTerminated, ResultCode);
         Result := False;

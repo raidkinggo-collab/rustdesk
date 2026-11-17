@@ -3,8 +3,6 @@ REM RionsDesk CONTROLLER + HOST - one PC that connects OUT and can also be conne
 REM conn-type left unset = both directions. Inbound uses the preset password (unattended).
 REM Password injected by CI from secret.
 cd /d "%~dp0"
-REM elevate if not running as admin (silent-install needs it)
-fsutil dirty query %systemdrive% >nul 2>&1 || (powershell -NoProfile -Command "Start-Process -Verb RunAs '%~f0'" & exit /b)
 
 copy /Y RionsDesk.exe RionsDesk-unattended.exe >nul 2>&1
 if exist RionsDesk-unattended.exe (
