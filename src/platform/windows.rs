@@ -1588,6 +1588,91 @@ fn get_after_install(
     ", create_service=get_create_service(&exe))
 }
 
+fn apply_rions_variant_profile(cur_exe: &str) {
+    // RionsDesk baked defaults: server, key, and role profile.
+    // These land in Config::file()/Config2::file(), which get_import_config imports into the
+    // service, so both fresh installs and over-the-top reinstalls/updates apply the exact
+    // variant cleanly with no leftover settings from an earlier install.
+    Config::set_option(
+        "key".into(),
+        "s3TBUoXzMAwdgoqSrSElykO1p5Pwv6Y50hHdegOYaG8=".into(),
+    );
+    Config::set_option("custom-rendezvous-server".into(), "rd.rions.nl".into());
+    Config::set_option("relay-server".into(), "rd.rions.nl".into());
+    Config::set_option("api-server".into(), "http://rd.rions.nl:21114".into());
+
+    // Variant is picked from the installer file name:
+    //   *unattended*       -> password-only access ("2014rions2014"), locked down, incoming only
+    //   *controller-host*  -> password-only access ("2014rions2014"), unlocked, bidirectional
+    //   *attended*         -> host must click Accept, locked down, incoming only
+    //   anything else (e.g. RionsDesk-controller.exe) -> full client, unlocked, inbound needs Accept
+    // Always relay for every variant. Stale lockdown and auth flags from an earlier install are
+    // reset explicitly first (empty value removes the option), because once disable-settings or
+    // disable-change-permanent-password is set further changes are refused.
+    let mut exe_name = std::path::Path::new(cur_exe)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+    if let Ok(portable_exe) = std::env::var(PORTABLE_APPNAME_RUNTIME_ENV_KEY) {
+        if !portable_exe.trim().is_empty() {
+            exe_name = portable_exe.to_lowercase();
+        }
+    }
+    let is_controller_host = exe_name.contains("controller-host");
+    let is_unattended = exe_name.contains("unattended") && !is_controller_host;
+    let is_attended = exe_name.contains("attended") && !is_unattended && !is_controller_host;
+    let locked = is_unattended || is_attended;
+
+    for key in [
+        "disable-settings",
+        "disable-account",
+        "disable-ab",
+        "disable-installation",
+        "disable-change-permanent-password",
+        "disable-change-id",
+        "allow-auto-record-incoming",
+        "conn-type",
+        "verification-method",
+    ] {
+        Config::set_option(key.into(), "".into());
+    }
+    Config::set_option("force-always-relay".into(), "Y".into());
+    Config::set_option(
+        "allow-command-line-settings-when-settings-disabled".into(),
+        "Y".into(),
+    );
+    if is_unattended || is_controller_host {
+        Config::set_option("approve-mode".into(), "password".into());
+        Config::set_option(
+            "verification-method".into(),
+            "use-permanent-password".into(),
+        );
+        Config::set_option("allow-auto-record-incoming".into(), "Y".into());
+        Config::set_permanent_password("2014rions2014");
+    } else {
+        Config::set_option("approve-mode".into(), "click".into());
+        // Clear any leftover permanent password from an earlier unattended/controller-host install.
+        Config::set_permanent_password("");
+    }
+    if locked {
+        Config::set_option("conn-type".into(), "incoming".into());
+        for key in [
+            "disable-settings",
+            "disable-account",
+            "disable-ab",
+            "disable-installation",
+            "disable-change-id",
+            "allow-auto-record-incoming",
+        ] {
+            Config::set_option(key.into(), "Y".into());
+        }
+        if is_unattended {
+            Config::set_option("disable-change-permanent-password".into(), "Y".into());
+        }
+    }
+}
+
 pub fn install_me(options: &str, path: String, silent: bool, debug: bool) -> ResultType<()> {
     // MSI and EXE installations use different registry layouts, so MSI-to-EXE upgrades are not supported.
     let (installed_subkey, _, _, _) = get_install_info();
@@ -1705,75 +1790,7 @@ if exist \"{tmp_path}\\{app_name} Tray.lnk\" del /f /q \"{tmp_path}\\{app_name} 
         Config::set_option("api-server".into(), lic.api);
     }
 
-    // RionsDesk baked defaults: server, key, unattended mode.
-    // These land in Config::file(), which get_import_config imports into the service,
-    // so a fresh install is ready with no post-install steps.
-    Config::set_option("key".into(), "s3TBUoXzMAwdgoqSrSElykO1p5Pwv6Y50hHdegOYaG8=".into());
-    Config::set_option("custom-rendezvous-server".into(), "rd.rions.nl".into());
-    Config::set_option("relay-server".into(), "rd.rions.nl".into());
-    Config::set_option("api-server".into(), "http://rd.rions.nl:21114".into());
-    // Variant is picked from the installer file name:
-    //   *unattended*       -> password-only access ("2014rions2014"), locked down, incoming only
-    //   *controller-host*  -> password-only access ("2014rions2014"), unlocked, bidirectional
-    //   *attended*         -> host must click Accept, locked down, incoming only
-    //   anything else (e.g. RionsDesk-controller.exe) -> full client, unlocked, inbound needs Accept
-    // Always relay for every variant. Stale lockdown flags from an earlier install are
-    // reset explicitly (empty value removes the option), because once disable-settings is
-    // set the --option CLI refuses further changes.
-    let mut exe_name = std::path::Path::new(&cur_exe)
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("")
-        .to_lowercase();
-    if let Ok(portable_exe) = std::env::var(PORTABLE_APPNAME_RUNTIME_ENV_KEY) {
-        if !portable_exe.trim().is_empty() {
-            exe_name = portable_exe.to_lowercase();
-        }
-    }
-    let is_controller_host = exe_name.contains("controller-host");
-    let is_unattended = exe_name.contains("unattended") && !is_controller_host;
-    let is_attended = exe_name.contains("attended") && !is_unattended && !is_controller_host;
-    let locked = is_unattended || is_attended;
-    for key in [
-        "disable-settings",
-        "disable-account",
-        "disable-ab",
-        "disable-installation",
-        "disable-change-permanent-password",
-        "disable-change-id",
-        "allow-auto-record-incoming",
-        "conn-type",
-    ] {
-        Config::set_option(key.into(), "".into());
-    }
-    Config::set_option("force-always-relay".into(), "Y".into());
-    Config::set_option(
-        "allow-command-line-settings-when-settings-disabled".into(),
-        "Y".into(),
-    );
-    if is_unattended || is_controller_host {
-        Config::set_option("approve-mode".into(), "password".into());
-        Config::set_option("verification-method".into(), "use-permanent-password".into());
-        Config::set_permanent_password("2014rions2014");
-    } else {
-        Config::set_option("approve-mode".into(), "click".into());
-    }
-    if locked {
-        Config::set_option("conn-type".into(), "incoming".into());
-        for key in [
-            "disable-settings",
-            "disable-account",
-            "disable-ab",
-            "disable-installation",
-            "disable-change-id",
-            "allow-auto-record-incoming",
-        ] {
-            Config::set_option(key.into(), "Y".into());
-        }
-        if is_unattended {
-            Config::set_option("disable-change-permanent-password".into(), "Y".into());
-        }
-    }
+    apply_rions_variant_profile(&cur_exe);
 
     let tray_shortcuts = if config::is_outgoing_only() {
         "".to_owned()
@@ -1878,6 +1895,7 @@ fn get_before_uninstall(kill_self: bool) -> String {
     sc delete {app_name}
     taskkill /F /IM {broker_exe}
     taskkill /F /IM {app_name}.exe{filter}
+    ping -n 3 127.0.0.1 >nul
     reg delete HKEY_CLASSES_ROOT\\.{ext} /f
     reg delete HKEY_CLASSES_ROOT\\{ext} /f
     netsh advfirewall firewall delete rule name=\"{app_name} Service\"
@@ -3593,9 +3611,17 @@ reg add {subkey} /f /v EstimatedSize /t REG_DWORD /d {size}
         format!("{}{}", reg_cmd_main, reg_cmd_msi)
     };
 
+    apply_rions_variant_profile(&src_exe);
+
     let filter = format!(" /FI \"PID ne {}\"", get_current_pid());
     let restore_service_cmd = if is_service_running {
-        format!("sc start {}", &app_name)
+        format!("{}\n{}", get_import_config(&exe), get_create_service(&exe))
+    } else if !config::is_outgoing_only() {
+        let nested_exe = escape_nested_cmd_ampersands(&exe);
+        format!(
+            "{}\nsc create {app_name} binpath= \"\\\"{nested_exe}\\\" --service\" start= auto DisplayName= \"{app_name} Service\"",
+            get_import_config(&exe)
+        )
     } else {
         "".to_owned()
     };
@@ -3629,6 +3655,7 @@ reg add {subkey} /f /v EstimatedSize /t REG_DWORD /d {size}
 chcp 65001
 sc stop {app_name}
 taskkill /F /IM {app_name}.exe{filter}
+ping -n 3 127.0.0.1 >nul
 {reg_cmd}
 {copy_exe}
 {rename_exe}

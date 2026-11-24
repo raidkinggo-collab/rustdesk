@@ -172,7 +172,8 @@ fn setup(
     };
 
     let mut ts = 0;
-    if clear || !is_timestamp_matches(&dir, &mut ts) {
+    let ts_matches = is_timestamp_matches(&dir, &mut ts);
+    if clear || !ts_matches {
         #[cfg(windows)]
         if _args.is_empty() {
             *_ui = true;
